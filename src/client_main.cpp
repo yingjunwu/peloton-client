@@ -1,31 +1,70 @@
 #include <cstdio>
+#include <cassert>
 
 #include <pqxx/pqxx> /* libpqxx is used to instantiate C++ client */
+
+void Populate(pqxx::work &txn_handle, const size_t table_size) {
+  for (size_t i = 0; i < table_size; ++i) {
+    txn_handle.exec("INSERT INTO employee VALUES (" + std::to_string(i) + ", 'a');");
+  }
+}
+
+
+void Select(pqxx::work &txn_handle, const size_t num_tuple) {
+  for (size_t i = 0; i < num_tuple; ++i) {
+    pqxx::result R = txn_handle.exec("SELECT name FROM employee WHERE id=" + std::to_string(i) + ";");
+    printf("txn result set size = %lu\n", R.size());
+  }
+}
 
 
 int main(int argc, char **argv) {
 
+  if (argc != 2 && argc != 3) {
+    printf("please input arguments\n");
+    return -1;
+  }
+
   try {
     pqxx::connection C(
-        "host=127.0.0.1 port=5431 user=postgres sslmode=disable"
+      "host=172.19.146.5 port=5432 user=postgres sslmode=disable"
     );
     printf("Connected to %s\n", C.dbname());
-    pqxx::work txn1(C);
 
-    txn1.exec("DROP TABLE IF EXISTS employee;");
-    txn1.exec("CREATE TABLE employee(id INT, name VARCHAR(100));");
-    txn1.commit();
+    if (std::string(argv[1]) == "populate") {
+      
+      size_t table_size = 100;
 
-    pqxx::work txn2(C);
-    txn2.exec("INSERT INTO employee VALUES (1, 'a');");
-    txn2.exec("INSERT INTO employee VALUES (2, 'b');");
-    txn2.exec("INSERT INTO employee VALUES (3, 'c');");
+      if (argc != 2) {
+        assert(argc == 3);
+        table_size = atoi(argv[2]);
+      }
 
-    pqxx::result R = txn2.exec("SELECT name FROM employee where id=1;");
-    txn2.commit();
+      printf("populate table!\n");
+      pqxx::work txn(C);
+      txn.exec("DROP TABLE IF EXISTS employee;");
+      txn.exec("CREATE TABLE employee(id INT, name VARCHAR(100));");
+      Populate(txn, table_size);
+      txn.commit();
+
+    } else if (std::string(argv[1]) == "select") {
+
+      size_t num_tuple = 1;
+
+      if (argc != 2) {
+        assert(argc == 3);
+        num_tuple = atoi(argv[2]);
+      }
+
+      printf("select from table!\n");
+      pqxx::work txn(C);
+      Select(txn, num_tuple);
+      txn.commit();
+    } else {
+      printf("please input correct arguments \n");
+      return -1;
+    }
     
-    printf("txn2 result set size = %lu\n", R.size());
-
   } catch (const std::exception &e) {
     printf("Exception occurred: %s\n", e.what());
     exit(-1);

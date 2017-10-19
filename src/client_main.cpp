@@ -7,7 +7,7 @@
 #include "fast_random.h"
 
 
-FastRandom rand;
+FastRandom fast_rand;
 
 size_t table_size = 100;
 
@@ -20,7 +20,7 @@ void Populate(pqxx::work &txn_handle, const size_t table_size) {
 
 void Select(pqxx::work &txn_handle, const size_t num_tuple) {
   for (size_t i = 0; i < num_tuple; ++i) {
-    pqxx::result R = txn_handle.exec("SELECT name FROM employee WHERE id=" + std::to_string(i) + ";");
+    pqxx::result R = txn_handle.exec("SELECT name FROM employee WHERE id=" + std::to_string(fast_rand.next() % table_size) + ";");
     printf("txn result set size = %lu\n", R.size());
   }
 }
@@ -28,8 +28,7 @@ void Select(pqxx::work &txn_handle, const size_t num_tuple) {
 
 void Update(pqxx::work &txn_handle, const size_t num_tuple) {
   for (size_t i = 0; i < num_tuple; ++i) {
-    pqxx::result R = txn_handle.exec("UPDATE employee SET name = 'z' WHERE id=" + std::to_string(i) + ";");
-    printf("txn result set size = %lu\n", R.size());
+    txn_handle.exec("UPDATE employee SET name = 'z' WHERE id=" + std::to_string(fast_rand.next() % table_size) + ";");
   }
 }
 
@@ -45,8 +44,10 @@ void Scan(pqxx::work &txn_handle) {
 
 int main(int argc, char **argv) {
 
-  if (argc != 2 && argc != 3) {
-    printf("Usage: %s populate|select|update num_operation\n", argv[0]);
+  if (argc != 2 && argc != 3 && argc != 4) {
+    printf("Usage: %s populate table_size with_index\n", argv[0]);
+    printf("Usage: %s select table_size num_tuple\n", argv[0]);
+    printf("Usage: %s update table_size num_tuple\n", argv[0]);
     return -1;
   }
 
@@ -57,31 +58,31 @@ int main(int argc, char **argv) {
     printf("Connected to %s\n", C.dbname());
 
     if (std::string(argv[1]) == "populate") {
+
+      assert(argc == 4);
       
-      // TODO: add index option
-
-      if (argc != 2) {
-        assert(argc == 3);
-        table_size = atoi(argv[2]);
-      }
-
+      table_size = atoi(argv[2]);
+      bool with_index = bool(atoi(argv[3]));
+      
       printf("populate table!\n");
       pqxx::work txn(C);
       txn.exec("DROP TABLE IF EXISTS employee;");
       txn.exec("CREATE TABLE employee(id INT, name VARCHAR(100));");
-      txn.exec("CREATE INDEX emp_index ON employee(id)");
+      
+      if (with_index == true) {
+        txn.exec("CREATE INDEX emp_index ON employee(id)");
+      }
+
       Populate(txn, table_size);
       txn.commit();
 
     } else if (std::string(argv[1]) == "select") {
 
-      size_t num_tuple = 1;
+      assert(argc == 4);
 
-      if (argc != 2) {
-        assert(argc == 3);
-        num_tuple = atoi(argv[2]);
-      }
-
+      table_size  = atoi(argv[2]);
+      size_t num_tuple = atoi(argv[3]);
+      
       printf("select from table!\n");
       pqxx::work txn(C);
       Select(txn, num_tuple);
@@ -89,12 +90,10 @@ int main(int argc, char **argv) {
     
     } else if (std::string(argv[1]) == "update") {
 
-      size_t num_tuple = 1;
+      assert(argc == 4);
 
-      if (argc != 2) {
-        assert(argc == 3);
-        num_tuple = atoi(argv[2]);
-      }
+      table_size  = atoi(argv[2]);
+      size_t num_tuple = atoi(argv[3]);
 
       printf("update table!\n");
       pqxx::work txn(C);

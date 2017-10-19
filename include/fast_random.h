@@ -5,12 +5,14 @@
 #include <thread>
 #include <string>
 #include <vector>
-
+#include <cstdlib>
 
 // Fast random number generator
 class FastRandom {
  public:
-  FastRandom(unsigned long seed) : seed(0) { set_seed0(seed); }
+  FastRandom() : FastRandom(rand()) {}
+
+  FastRandom(unsigned long s) : seed(s) { set_seed0(seed); }
 
   inline unsigned long next() {
     return ((unsigned long)next(32) << 32) + next(32);

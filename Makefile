@@ -10,7 +10,7 @@ TARGETS=peloton_client
 
 all: $(TARGETS)
 
-peloton_client: $(SRC)/client_main.o
+peloton_client: $(SRC)/client_config.o $(SRC)/client_program.o $(SRC)/client_main.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:

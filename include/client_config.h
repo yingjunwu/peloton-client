@@ -8,9 +8,10 @@
 #include <cstring>
 
 enum class ProgramType {
-  POPULATE,
-  PROCESS,
-  SCAN,
+  POPULATE,   // populate table
+  CLIENT,     // process transactions via client interface
+  PROCEDURE,  // process transactions via stored procedure
+  SCAN,       // scan table
   INVALID,
 };
 

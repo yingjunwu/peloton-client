@@ -21,19 +21,25 @@ int main(int argc, char **argv) {
       // populate table
       Populate(conn, config);
     
-    } else if (config.program_type_ == ProgramType::PROCESS) {
-      // process queries
-      Process(conn, config);
+    } else if (config.program_type_ == ProgramType::CLIENT) {
+      // process transactions via client interface
+      ProcessClient(conn, config);
     
+    } else if (config.program_type_ == ProgramType::PROCEDURE) {
+      // process transactions via stored procedure
+      ProcessProcedure(conn, config);
+
     } else if (config.program_type_ == ProgramType::SCAN) {
       // scan table
       Scan(conn);
     
+    } else {
+      exit(EXIT_FAILURE);
     }
     
   } catch (const std::exception &e) {
     printf("Exception occurred: %s\n", e.what());
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 
   return 0;

@@ -14,5 +14,5 @@ peloton_client: $(SRC)/client_config.o $(SRC)/client_program.o $(SRC)/client_mai
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:
-	rm $(SRC)/*.o $(TARGETS)
+	rm -rf $(SRC)/*.o $(TARGETS)
 

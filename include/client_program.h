@@ -6,6 +6,9 @@
 
 void Populate(pqxx::connection &conn, const ClientConfig &config);
 
-void Process(pqxx::connection &conn, const ClientConfig &config);
+void ProcessClient(pqxx::connection &conn, const ClientConfig &config);
+
+void ProcessProcedure(pqxx::connection &conn, const ClientConfig &config);
 
 void Scan(pqxx::connection &conn);
+

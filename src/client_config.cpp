@@ -3,7 +3,7 @@
 
 void Usage(FILE *out) {
   fprintf(out,
-          "Command line options : ycsb_bench <options> \n"
+          "Command line options : client_program <options> \n"
           "   -h --help              :  print help message \n"
           "   -t --thread_count      :  # of threads \n"
           "   -k --scale_factor      :  scale factor \n"
@@ -12,10 +12,9 @@ void Usage(FILE *out) {
           "   -u --update_ratio      :  update ratio \n"
           "   -i --with_index        :  with index \n"
           "   -p --with_prep_stmt    :  with prepared statement \n"
-          "   -y --program_type      :  program type (populate/process/scan) \n"
+          "   -y --program_type      :  program type (populate/client/procedure/scan) \n"
   );
 }
-
 
 static struct option opts[] = {
     { "thread_count", optional_argument, NULL, 't' },
@@ -74,8 +73,10 @@ void ParseArguments(int argc, char *argv[], ClientConfig &conf) {
         char *program_type = optarg;
         if (strcmp(program_type, "populate") == 0) {
           conf.program_type_ = ProgramType::POPULATE;
-        } else if (strcmp(program_type, "process") == 0) {
-          conf.program_type_ = ProgramType::PROCESS;
+        } else if (strcmp(program_type, "client") == 0) {
+          conf.program_type_ = ProgramType::CLIENT;
+        } else if (strcmp(program_type, "procedure") == 0) {
+          conf.program_type_ = ProgramType::PROCEDURE;
         } else if (strcmp(program_type, "scan") == 0) {
           conf.program_type_ = ProgramType::SCAN;
         } else {

@@ -24,7 +24,7 @@ void Populate(pqxx::connection &conn, const ClientConfig &config) {
   txn.commit();
 }
 
-void Process(pqxx::connection &conn, const ClientConfig &config) {
+void ProcessClient(pqxx::connection &conn, const ClientConfig &config) {
 
   FastRandom fast_rand;
 
@@ -62,6 +62,14 @@ void Process(pqxx::connection &conn, const ClientConfig &config) {
   txn.commit();
 }
 
+void ProcessProcedure(pqxx::connection &conn, const ClientConfig &config) {
+  
+  pqxx::nontransaction nontxn(conn);
+  
+  nontxn.exec("update test set b = b + 1;");
+  
+}
+
 void Scan(pqxx::connection &conn) {
   
   pqxx::work txn(conn);
@@ -78,4 +86,3 @@ void Scan(pqxx::connection &conn) {
   
   txn.commit();
 }
-

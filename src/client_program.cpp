@@ -11,7 +11,7 @@ void Populate(pqxx::connection &conn, const ClientConfig &config) {
   
   std::cout << ">>>>> Populate table \'employee\'. " << std::endl
             << "   -- Build index? : " << config.with_index_ << std::endl
-            << "   -- Table size : " << table_size << std::endl;
+            << "   -- Table size   : " << table_size << std::endl;
 
   pqxx::work txn(conn);
 
@@ -60,7 +60,7 @@ void ProcessClient(pqxx::connection &conn, const ClientConfig &config) {
       } else {
         // select
         pqxx::result R = txn.prepared("read")(key).exec();
-        printf("txn result set size = %lu\n", R.size());
+        printf("key = %lu, txn result set size = %lu\n", key, R.size());
       }
     }
   } else {
@@ -74,7 +74,7 @@ void ProcessClient(pqxx::connection &conn, const ClientConfig &config) {
       } else {
         // select
         pqxx::result R = txn.exec("SELECT name FROM employee WHERE id=" + std::to_string(key) + ";");
-        printf("txn result set size = %lu\n", R.size());
+        printf("key = %lu, txn result set size = %lu\n", key, R.size());
       }
     }
   }

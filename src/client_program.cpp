@@ -9,9 +9,9 @@ void Populate(pqxx::connection &conn, const ClientConfig &config) {
 
   size_t table_size = config.default_table_size_ * config.scale_factor_;
   
-  std::cout << "Populate table \'employee\'. "
-            << "Build index? : " << config.with_index_ << ". "
-            << "Table size : " << table_size << "." << std::endl;
+  std::cout << ">>>>> Populate table \'employee\'. " << std::endl
+            << "-- Build index? : " << config.with_index_ << std::endl
+            << "-- Table size : " << table_size << std::endl;
 
   pqxx::work txn(conn);
 
@@ -36,12 +36,12 @@ void ProcessClient(pqxx::connection &conn, const ClientConfig &config) {
 
   ZipfDistribution zipf(table_size, config.zipf_theta_);
 
-  std::cout << "Process transactions via client interface. "
-            << "With prepared statement? : " << config.with_prep_stmt_ << ". "
-            << "Table size : " << table_size << ". " 
-            << "Operation count : " << config.operation_count_ << ". " 
-            << "Update ratio : " << config.update_ratio_ << ". " 
-            << "Zipf theta : " << config.zipf_theta_ << ". " << std::endl;
+  std::cout << ">>>>> Process transactions via client interface. " << std::endl
+            << "-- With prepared statement? : " << config.with_prep_stmt_ << std::endl
+            << "-- Table size : " << table_size << std::endl
+            << "-- Operation count : " << config.operation_count_ << std::endl
+            << "-- Update ratio : " << config.update_ratio_ << std::endl
+            << "-- Zipf theta : " << config.zipf_theta_ << std::endl;
   
   pqxx::work txn(conn);
 
@@ -86,12 +86,13 @@ void ProcessProcedure(pqxx::connection &conn, const ClientConfig &config) {
   FastRandom fast_rand;
 
   size_t table_size = config.default_table_size_ * config.scale_factor_;
-  
-  std::cout << "Process transactions via client interface."
-            << "With prepared statement? : " << config.with_prep_stmt_ << ". "
-            << "Table size : " << table_size << "." 
-            << "Operation count : " << config.operation_count_ << "."
-            << "Update ratio : " << config.update_ratio_ << "." << std::endl;
+
+  std::cout << ">>>>> Process transactions via stored procedure. "
+            << "-- With prepared statement? : " << config.with_prep_stmt_ << std::endl
+            << "-- Table size : " << table_size << std::endl
+            << "-- Operation count : " << config.operation_count_ << std::endl
+            << "-- Update ratio : " << config.update_ratio_ << std::endl
+            << "-- Zipf theta : " << config.zipf_theta_ << std::endl;
 
   pqxx::nontransaction nontxn(conn);
 
@@ -109,6 +110,8 @@ void ProcessProcedure(pqxx::connection &conn, const ClientConfig &config) {
 void Scan(pqxx::connection &conn) {
   
   pqxx::work txn(conn);
+
+  std::cout << ">>>>> Scan table." << std::endl;
 
   pqxx::result R = txn.exec("SELECT * FROM employee;");
   

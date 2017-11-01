@@ -6,8 +6,12 @@
 #include "fast_random.h"
 
 void Populate(pqxx::connection &conn, const ClientConfig &config) {
-  
+
   size_t table_size = config.default_table_size_ * config.scale_factor_;
+  
+  std::cout << "Populate table \'employee\'. "
+            << "Build index? : " << config.with_index_ << ". "
+            << "Table size : " << table_size << "." << std::endl;
 
   pqxx::work txn(conn);
 
@@ -26,9 +30,18 @@ void Populate(pqxx::connection &conn, const ClientConfig &config) {
 
 void ProcessClient(pqxx::connection &conn, const ClientConfig &config) {
 
+  size_t table_size = config.default_table_size_ * config.scale_factor_;
+
   FastRandom fast_rand;
 
-  size_t table_size = config.default_table_size_ * config.scale_factor_;
+  ZipfDistribution zipf(table_size, config.zipf_theta_);
+
+  std::cout << "Process transactions via client interface. "
+            << "With prepared statement? : " << config.with_prep_stmt_ << ". "
+            << "Table size : " << table_size << ". " 
+            << "Operation count : " << config.operation_count_ << ". " 
+            << "Update ratio : " << config.update_ratio_ << ". " 
+            << "Zipf theta : " << config.zipf_theta_ << ". " << std::endl;
   
   pqxx::work txn(conn);
 
@@ -38,23 +51,29 @@ void ProcessClient(pqxx::connection &conn, const ClientConfig &config) {
     conn.prepare("write", "UPDATE employee SET name = 'z' WHERE id=$1");
     
     for (size_t i = 0; i < config.operation_count_; ++i) {
+      
+      size_t key = zipf.GetNextNumber() - 1;
+      
       if (fast_rand.next_uniform() < config.update_ratio_) {
         // update
-        txn.prepared("write")(fast_rand.next() % table_size).exec();
+        txn.prepared("write")(key).exec();
       } else {
         // select
-        pqxx::result R = txn.prepared("read")(fast_rand.next() % table_size).exec();
+        pqxx::result R = txn.prepared("read")(key).exec();
         printf("txn result set size = %lu\n", R.size());
       }
     }
   } else {
     for (size_t i = 0; i < config.operation_count_; ++i) {
+      
+      size_t key = zipf.GetNextNumber() - 1;
+      
       if (fast_rand.next_uniform() < config.update_ratio_) {
         // update
-        txn.exec("UPDATE employee SET name = 'z' WHERE id=" + std::to_string(fast_rand.next() % table_size) + ";");
+        txn.exec("UPDATE employee SET name = 'z' WHERE id=" + std::to_string(key) + ";");
       } else {
         // select
-        pqxx::result R = txn.exec("SELECT name FROM employee WHERE id=" + std::to_string(fast_rand.next() % table_size) + ";");
+        pqxx::result R = txn.exec("SELECT name FROM employee WHERE id=" + std::to_string(key) + ";");
         printf("txn result set size = %lu\n", R.size());
       }
     }
@@ -63,9 +82,20 @@ void ProcessClient(pqxx::connection &conn, const ClientConfig &config) {
 }
 
 void ProcessProcedure(pqxx::connection &conn, const ClientConfig &config) {
+
+  FastRandom fast_rand;
+
+  size_t table_size = config.default_table_size_ * config.scale_factor_;
   
+  std::cout << "Process transactions via client interface."
+            << "With prepared statement? : " << config.with_prep_stmt_ << ". "
+            << "Table size : " << table_size << "." 
+            << "Operation count : " << config.operation_count_ << "."
+            << "Update ratio : " << config.update_ratio_ << "." << std::endl;
+
   pqxx::nontransaction nontxn(conn);
-  
+
+  // wrong procedure!  
   std::string func("CREATE OR REPLACE FUNCTION inc(val integer) RETURNS integer AS $$ \
               BEGIN \
               RETURN SELECT b FROM test where a = 1; \

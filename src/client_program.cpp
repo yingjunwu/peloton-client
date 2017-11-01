@@ -66,8 +66,14 @@ void ProcessProcedure(pqxx::connection &conn, const ClientConfig &config) {
   
   pqxx::nontransaction nontxn(conn);
   
-  nontxn.exec("update test set b = b + 1;");
-  
+  std::string func("CREATE OR REPLACE FUNCTION inc(val integer) RETURNS integer AS $$ \
+              BEGIN \
+              RETURN SELECT b FROM test where a = 1; \
+              END; $$ \
+              LANGUAGE PLPGSQL;");
+
+  nontxn.exec(func.c_str());
+
 }
 
 void Scan(pqxx::connection &conn) {

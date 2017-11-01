@@ -3,4 +3,4 @@ if [ "$#" -ne 5 ]; then
   echo "The table size will be scale_factor * 1000."
   exit 1;
 fi
-../peloton_client -y client $1$ $2$ $3$ $4$ $5$
+../peloton_client -y client -p $1$ -k $2$ -o $3$ -u $4$ -z $5$

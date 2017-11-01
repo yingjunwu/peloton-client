@@ -5,7 +5,7 @@ if [ "$#" -ne 2 ]; then
   exit 1;
 fi
 if [ "$1" -ne 0 ]; then
-  ../peloton_client -y populate -i -k $2$  
+  ../driver_main -y populate -i -k $2$  
 else
-  ../peloton_client -y populate -k $2$
+  ../driver_main -y populate -k $2$
 fi

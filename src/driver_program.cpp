@@ -2,10 +2,10 @@
 #include <cstdio>
 #include <cassert>
 
-#include "client_program.h"
+#include "driver_program.h"
 #include "fast_random.h"
 
-void Populate(pqxx::connection &conn, const ClientConfig &config) {
+void Populate(pqxx::connection &conn, const DriverConfig &config) {
 
   size_t table_size = config.default_table_size_ * config.scale_factor_;
   
@@ -28,7 +28,7 @@ void Populate(pqxx::connection &conn, const ClientConfig &config) {
   txn.commit();
 }
 
-void ProcessClient(pqxx::connection &conn, const ClientConfig &config) {
+void ProcessClient(pqxx::connection &conn, const DriverConfig &config) {
 
   size_t table_size = config.default_table_size_ * config.scale_factor_;
 
@@ -81,7 +81,7 @@ void ProcessClient(pqxx::connection &conn, const ClientConfig &config) {
   txn.commit();
 }
 
-void ProcessProcedure(pqxx::connection &conn, const ClientConfig &config) {
+void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
 
   size_t table_size = config.default_table_size_ * config.scale_factor_;
 

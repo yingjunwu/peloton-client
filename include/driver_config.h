@@ -16,7 +16,7 @@ enum class ProgramType {
 };
 
 
-struct ClientConfig {
+struct DriverConfig {
 
   const size_t default_table_size_ = 1000;
   
@@ -47,4 +47,4 @@ struct ClientConfig {
 
 void Usage(FILE *out);
 
-void ParseArguments(int argc, char *argv[], ClientConfig &);
+void ParseArguments(int argc, char *argv[], DriverConfig &);

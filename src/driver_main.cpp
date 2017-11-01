@@ -3,9 +3,9 @@
 
 #include <pqxx/pqxx> /* libpqxx is used to instantiate C++ client */
 
-#include "client_program.h"
+#include "driver_program.h"
 
-ClientConfig config;
+DriverConfig config;
 
 int main(int argc, char **argv) {
 

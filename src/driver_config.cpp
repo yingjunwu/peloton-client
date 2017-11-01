@@ -1,9 +1,9 @@
-#include "client_config.h"
+#include "driver_config.h"
 
 
 void Usage(FILE *out) {
   fprintf(out,
-          "Command line options : client_program <options> \n"
+          "Command line options : driver_main <options> \n"
           "   -h --help              :  print help message \n"
           "   -t --thread_count      :  # of threads \n"
           "   -k --scale_factor      :  scale factor \n"
@@ -28,7 +28,7 @@ static struct option opts[] = {
     { NULL, 0, NULL, 0 }
 };
 
-void ParseArguments(int argc, char *argv[], ClientConfig &conf) {
+void ParseArguments(int argc, char *argv[], DriverConfig &conf) {
 
   conf.thread_count_ = 1;
   conf.scale_factor_ = 1;

@@ -3,14 +3,14 @@ INCLUDE=include
 SRC=src
 CFLAGS=-O3 -Wall -std=c++11 -I./$(INCLUDE) -lpthread -pthread -lpqxx -lpq
 DEPS=$(INCLUDE)/time_measurer.h
-TARGETS=peloton_client
+TARGETS=driver_main
 
 %.o: %.cpp $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 all: $(TARGETS)
 
-peloton_client: $(SRC)/client_config.o $(SRC)/client_program.o $(SRC)/client_main.o
+driver_main: $(SRC)/driver_config.o $(SRC)/driver_program.o $(SRC)/driver_main.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:

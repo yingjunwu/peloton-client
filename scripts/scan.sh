@@ -3,4 +3,4 @@ if [ "$#" -ne 0 ]; then
   echo "Example: "$0
   exit 1;
 fi
-../peloton_client -y scan
+../driver_main -y scan

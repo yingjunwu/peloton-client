@@ -164,11 +164,11 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
   std::cout << func_str << std::endl;
   std::cout << "<<<<<<<<<<<<<<<" << std::endl;
 
-  pqxx::nontransaction nontxn(conn);
+  pqxx::nontransaction nontxn0(conn);
 
-  nontxn.exec(func_str.c_str());
+  nontxn0.exec(func_str.c_str());
 
-  nontxn.commit();
+  nontxn0.commit();
 
   pqxx::work txn(conn);
 

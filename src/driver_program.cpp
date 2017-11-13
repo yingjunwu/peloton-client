@@ -96,7 +96,7 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
             << "   -- Update ratio    : " << config.update_ratio_ << std::endl
             << "   -- Zipf theta      : " << config.zipf_theta_ << std::endl;
   
-  FastRandom fast_rand();
+  FastRandom fast_rand;
 
   size_t read_count = 0;
   bool *is_update = new bool[config.operation_count_];
@@ -139,13 +139,6 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
   }
   
   func_str += "AS $$ ";
-  
-  // if (read_count != 0) {
-  //   func_str += "DECLARE";
-  //   for (size_t i = 0; i < read_count; ++i) {
-  //     func_str += " ref" + std::to_string(i) + " refcursor" + "; ";
-  //   }
-  // }
 
   func_str += "BEGIN ";
 
@@ -193,14 +186,23 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
       txn_str += std::to_string(key) + ", ";
     }
     for (size_t i = 0; i < read_count - 1; ++i) {
-      func_str += "'ref" + std::to_string(i) + "', ";
+      txn_str += "'ref" + std::to_string(i) + "', ";
     }
-    func_str += "'ref" + std::to_string(read_count - 1) + "') ";
+    txn_str += "'ref" + std::to_string(read_count - 1) + "') ";
   }
+
+  std::cout << txn_str << std::endl;
 
   txn.exec(txn_str.c_str());
 
   txn.commit();
+
+  pqxx::nontransaction nontxn1(conn);
+
+  nontxn1.exec("DROP FUNCTION ycsb;");
+
+  nontxn1.commit();
+
 
   delete[] is_update;
   is_update = nullptr;

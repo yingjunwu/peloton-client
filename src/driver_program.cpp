@@ -198,8 +198,12 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
   for (size_t i = 0; i < read_count; ++i) {
     std::string select_str = "FETCH ALL FROM ref" + std::to_string(i) + ";";
     pqxx::result R = txn.exec(select_str.c_str());
-    std::cout << "size = " << R.size() << std::endl;
-    std::cout << R[0][0].as<std::string>() << std::endl; 
+    
+    std::cout << "txn result set size = " << R.size() << std::endl;
+
+    for (size_t i = 0; i < R.size(); ++i) {
+      std::cout << R[i][0].as<std::string>() << std::endl;
+    }
   }
 
   txn.commit();

@@ -29,6 +29,8 @@ void Populate(pqxx::connection &conn, const DriverConfig &config) {
 }
 
 void ProcessClient(pqxx::connection &conn, const DriverConfig &config) {
+  
+  srand(time(NULL));
 
   size_t table_size = config.default_table_size_ * config.scale_factor_;
 
@@ -82,6 +84,8 @@ void ProcessClient(pqxx::connection &conn, const DriverConfig &config) {
 }
 
 void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
+  
+  srand(time(NULL));
 
   size_t table_size = config.default_table_size_ * config.scale_factor_;
 
@@ -93,18 +97,112 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
 
   FastRandom fast_rand;
 
+  size_t read_count = 0;
+  bool *is_update = new bool[config.operation_count_];
+  for (size_t i = 0; i < config.operation_count_; ++i) {
+    if (fast_rand.next_uniform() < config.update_ratio_) {
+      is_update[i] = true;
+    } else {
+      is_update[i] = false;
+      ++read_count;
+    }
+  }
+
   ZipfDistribution zipf(table_size, config.zipf_theta_);
+
+  std::string func_str("CREATE OR REPLACE FUNCTION ycsb(");
+
+  if (read_count == 0) {
+    for (size_t i = 0; i < config.operation_count_ - 1; ++i) {
+      func_str += "val" + std::to_string(i) + " integer, ";
+    }
+    func_str +=  "val" + std::to_string(config.operation_count_ - 1) + " integer) ";
+  } else {
+    for (size_t i = 0; i < config.operation_count_; ++i) {
+      func_str += "val" + std::to_string(i) + " integer, ";
+    }
+    for (size_t i = 0; i < read_count - 1; ++i) {
+      func_str += "ref" + std::to_string(i) + " refcursor, ";
+    }
+    func_str += "ref" + std::to_string(read_count - 1) + " refcursor) ";
+  }
+
+  func_str += "RETURNS ";
+  
+  if (read_count == 0) {
+    func_str += "void ";
+  } else if (read_count == 1) {
+    func_str += "refcursor ";
+  } else {
+    func_str += "SETOF refcursor ";
+  }
+  
+  func_str += "AS $$ ";
+  
+  // if (read_count != 0) {
+  //   func_str += "DECLARE";
+  //   for (size_t i = 0; i < read_count; ++i) {
+  //     func_str += " ref" + std::to_string(i) + " refcursor" + "; ";
+  //   }
+  // }
+
+  func_str += "BEGIN ";
+
+  size_t curr_read_count = 0;
+  for (size_t i = 0; i < config.operation_count_; ++i) {
+    if (is_update[i] == true) {
+      // is update
+      func_str += "UPDATE employee SET name = 'z' WHERE id=val" + std::to_string(i) + ";";
+    } else {
+      // is read
+      if (read_count == 1) {
+        func_str += "OPEN ref" + std::to_string(curr_read_count) + " FOR SELECT name FROM employee where id = val" + std::to_string(i) + "; RETURN ref" + std::to_string(curr_read_count) + ";";
+        ++curr_read_count;
+      } else {
+        func_str += "OPEN ref" + std::to_string(curr_read_count) + " FOR SELECT name FROM employee where id = val" + std::to_string(i) + "; RETURN NEXT ref" + std::to_string(curr_read_count) + ";";
+        ++curr_read_count;
+      }
+    }
+  }
+  func_str += " END; $$ LANGUAGE PLPGSQL;";
+
+  std::cout << ">>>>>>>>>>>>>>>" << std::endl;
+  std::cout << func_str << std::endl;
+  std::cout << "<<<<<<<<<<<<<<<" << std::endl;
 
   pqxx::nontransaction nontxn(conn);
 
-  // wrong procedure!  
-  std::string func("CREATE OR REPLACE FUNCTION inc(val integer) RETURNS integer AS $$ \
-              BEGIN \
-              RETURN SELECT b FROM test where a = 1; \
-              END; $$ \
-              LANGUAGE PLPGSQL;");
+  nontxn.exec(func_str.c_str());
 
-  nontxn.exec(func.c_str());
+  nontxn.commit();
+
+  pqxx::work txn(conn);
+
+  std::string txn_str = "SELECT ycsb(";
+  if (read_count == 0) {
+    for (size_t i = 0; i < config.operation_count_ - 1; ++i) {
+      size_t key = zipf.GetNextNumber() - 1;
+      txn_str += std::to_string(key) + ", ";
+    }
+    size_t key = zipf.GetNextNumber() - 1;
+    txn_str += std::to_string(key) + ");";
+  } else {
+    for (size_t i = 0; i < config.operation_count_; ++i) {
+      size_t key = zipf.GetNextNumber() - 1;
+      txn_str += std::to_string(key) + ", ";
+    }
+    for (size_t i = 0; i < read_count - 1; ++i) {
+      func_str += "'ref" + std::to_string(i) + "', ";
+    }
+    func_str += "'ref" + std::to_string(read_count - 1) + "') ";
+  }
+
+  txn.exec(txn_str.c_str());
+
+  txn.commit();
+
+  delete[] is_update;
+  is_update = nullptr;
 
 }
 
@@ -126,3 +224,10 @@ void Scan(pqxx::connection &conn) {
   
   txn.commit();
 }
+
+
+
+
+
+
+

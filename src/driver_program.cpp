@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cassert>
+#include <ctime>
 
 #include "driver_program.h"
 #include "fast_random.h"
@@ -84,9 +85,9 @@ void ProcessClient(pqxx::connection &conn, const DriverConfig &config) {
 }
 
 void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
-  
-  srand(time(NULL));
 
+  srand(time(NULL));
+  
   size_t table_size = config.default_table_size_ * config.scale_factor_;
 
   std::cout << ">>>>> Process transactions via stored procedure. "
@@ -94,8 +95,8 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
             << "   -- Operation count : " << config.operation_count_ << std::endl
             << "   -- Update ratio    : " << config.update_ratio_ << std::endl
             << "   -- Zipf theta      : " << config.zipf_theta_ << std::endl;
-
-  FastRandom fast_rand;
+  
+  FastRandom fast_rand();
 
   size_t read_count = 0;
   bool *is_update = new bool[config.operation_count_];

@@ -172,7 +172,7 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
 
   pqxx::work txn(conn);
 
-  std::string txn_str = "SELECT ycsb(";
+  /*std::string txn_str = "SELECT ycsb(";
   if (read_count == 0) {
     for (size_t i = 0; i < config.operation_count_ - 1; ++i) {
       size_t key = zipf.GetNextNumber() - 1;
@@ -191,9 +191,17 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
     txn_str += "'ref" + std::to_string(read_count - 1) + "') ";
   }
 
+  txn_str += ";";
+
   std::cout << txn_str << std::endl;
 
-  txn.exec(txn_str.c_str());
+  txn.exec(txn_str.c_str());*/
+
+  txn.exec("select ycsb(1, 'ref0');");
+  
+  pqxx::result R = txn.exec("FETCH ALL FROM ref0;");
+  std::cout << "size = " << R.size() << std::endl;
+  std::cout << R[0][0].as<std::string>() << std::endl;
 
   txn.commit();
 

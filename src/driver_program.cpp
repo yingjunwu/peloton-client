@@ -161,7 +161,10 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
   func_str += " END; $$ LANGUAGE PLPGSQL;";
 
   std::cout << ">>>>>>>>>>>>>>>" << std::endl;
-  std::cout << func_str << std::endl;
+  for (size_t i = 0; i < config.operation_count_; ++i) {
+    std::cout << is_update[i] << " ";
+  }
+  std::cout << std::endl;
   std::cout << "<<<<<<<<<<<<<<<" << std::endl;
 
   pqxx::nontransaction nontxn0(conn);

@@ -1,7 +1,4 @@
-echo "disabled for now!"
-exit 1;
-
-if [ "$#" -ne 5 ]; then
+if [ "$#" -ne 4 ]; then
   echo "Please input parameters."
   echo "Example: "$0" scale_factor operation_count update_ratio zipf_theta"
   echo "The table size will be scale_factor * 1000."

@@ -6,6 +6,8 @@
 #include "driver_program.h"
 #include "fast_random.h"
 
+const int repeat_count = 10;
+
 void Populate(pqxx::connection &conn, const DriverConfig &config) {
 
   size_t table_size = config.default_table_size_ * config.scale_factor_;
@@ -46,42 +48,57 @@ void ProcessClient(pqxx::connection &conn, const DriverConfig &config) {
             << "   -- Update ratio             : " << config.update_ratio_ << std::endl
             << "   -- Zipf theta               : " << config.zipf_theta_ << std::endl;
   
-  pqxx::work txn(conn);
-
   if (config.with_prep_stmt_ == true) {
 
     conn.prepare("read", "SELECT name FROM employee WHERE id=$1");
-    conn.prepare("write", "UPDATE employee SET name = 'z' WHERE id=$1");
+    conn.prepare("write", "UPDATE employee SET name = 'z' WHERE id=$1");    
     
-    for (size_t i = 0; i < config.operation_count_; ++i) {
-      
-      size_t key = zipf.GetNextNumber() - 1;
-      
-      if (fast_rand.next_uniform() < config.update_ratio_) {
-        // update
-        txn.prepared("write")(key).exec();
-      } else {
-        // select
-        pqxx::result R = txn.prepared("read")(key).exec();
-        printf("key = %lu, txn result set size = %lu\n", key, R.size());
+    for (size_t t = 0; t < repeat_count; ++t) {
+
+      pqxx::work txn(conn);
+
+      for (size_t i = 0; i < config.operation_count_; ++i) {
+        
+        size_t key = zipf.GetNextNumber() - 1;
+        
+        if (fast_rand.next_uniform() < config.update_ratio_) {
+          // update
+          txn.prepared("write")(key).exec();
+        } else {
+          // select
+          pqxx::result R = txn.prepared("read")(key).exec();
+          printf("key = %lu, txn result set size = %lu\n", key, R.size());
+        }
       }
+    
+      txn.commit();
     }
+
   } else {
-    for (size_t i = 0; i < config.operation_count_; ++i) {
+
+    for (size_t t = 0; t < repeat_count; ++t) {
       
-      size_t key = zipf.GetNextNumber() - 1;
-      
-      if (fast_rand.next_uniform() < config.update_ratio_) {
-        // update
-        txn.exec("UPDATE employee SET name = 'z' WHERE id=" + std::to_string(key) + ";");
-      } else {
-        // select
-        pqxx::result R = txn.exec("SELECT name FROM employee WHERE id=" + std::to_string(key) + ";");
-        printf("key = %lu, txn result set size = %lu\n", key, R.size());
+      pqxx::work txn(conn);
+
+      for (size_t i = 0; i < config.operation_count_; ++i) {
+        
+        size_t key = zipf.GetNextNumber() - 1;
+        
+        if (fast_rand.next_uniform() < config.update_ratio_) {
+          // update
+          txn.exec("UPDATE employee SET name = 'z' WHERE id=" + std::to_string(key) + ";");
+        } else {
+          // select
+          pqxx::result R = txn.exec("SELECT name FROM employee WHERE id=" + std::to_string(key) + ";");
+          printf("key = %lu, txn result set size = %lu\n", key, R.size());
+        }
       }
+
+      txn.commit();
     }
+
   }
-  txn.commit();
+
 }
 
 void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
@@ -150,10 +167,14 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
     } else {
       // is read
       if (read_count == 1) {
-        func_str += "OPEN ref" + std::to_string(curr_read_count) + " FOR SELECT name FROM employee where id = val" + std::to_string(i) + "; RETURN ref" + std::to_string(curr_read_count) + ";";
+        func_str += "OPEN ref" + std::to_string(curr_read_count) + 
+                    " FOR SELECT name FROM employee where id = val" + 
+                    std::to_string(i) + "; RETURN ref" + std::to_string(curr_read_count) + ";";
         ++curr_read_count;
       } else {
-        func_str += "OPEN ref" + std::to_string(curr_read_count) + " FOR SELECT name FROM employee where id = val" + std::to_string(i) + "; RETURN NEXT ref" + std::to_string(curr_read_count) + ";";
+        func_str += "OPEN ref" + std::to_string(curr_read_count) + 
+                    " FOR SELECT name FROM employee where id = val" + 
+                    std::to_string(i) + "; RETURN NEXT ref" + std::to_string(curr_read_count) + ";";
         ++curr_read_count;
       }
     }
@@ -173,43 +194,47 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
 
   nontxn0.commit();
 
-  pqxx::work txn(conn);
+  for (size_t t = 0; t < repeat_count; ++t) {
 
-  std::string txn_str = "SELECT ycsb(";
-  if (read_count == 0) {
-    for (size_t i = 0; i < config.operation_count_ - 1; ++i) {
+    pqxx::work txn(conn);
+
+    std::string txn_str = "SELECT ycsb(";
+    if (read_count == 0) {
+      for (size_t i = 0; i < config.operation_count_ - 1; ++i) {
+        size_t key = zipf.GetNextNumber() - 1;
+        txn_str += std::to_string(key) + ", ";
+      }
       size_t key = zipf.GetNextNumber() - 1;
-      txn_str += std::to_string(key) + ", ";
+      txn_str += std::to_string(key) + ");";
+    } else {
+      for (size_t i = 0; i < config.operation_count_; ++i) {
+        size_t key = zipf.GetNextNumber() - 1;
+        txn_str += std::to_string(key) + ", ";
+      }
+      for (size_t i = 0; i < read_count - 1; ++i) {
+        txn_str += "'ref" + std::to_string(i) + "', ";
+      }
+      txn_str += "'ref" + std::to_string(read_count - 1) + "');";
     }
-    size_t key = zipf.GetNextNumber() - 1;
-    txn_str += std::to_string(key) + ");";
-  } else {
-    for (size_t i = 0; i < config.operation_count_; ++i) {
-      size_t key = zipf.GetNextNumber() - 1;
-      txn_str += std::to_string(key) + ", ";
+
+    std::cout << txn_str << std::endl;
+
+    txn.exec(txn_str.c_str());
+
+    for (size_t i = 0; i < read_count; ++i) {
+      std::string select_str = "FETCH ALL FROM ref" + std::to_string(i) + ";";
+      pqxx::result R = txn.exec(select_str.c_str());
+      
+      std::cout << "txn result set size = " << R.size() << std::endl;
+
+      for (size_t i = 0; i < R.size(); ++i) {
+        std::cout << R[i][0].as<std::string>() << std::endl;
+      }
     }
-    for (size_t i = 0; i < read_count - 1; ++i) {
-      txn_str += "'ref" + std::to_string(i) + "', ";
-    }
-    txn_str += "'ref" + std::to_string(read_count - 1) + "');";
+
+    txn.commit();
+
   }
-
-  std::cout << txn_str << std::endl;
-
-  txn.exec(txn_str.c_str());
-
-  for (size_t i = 0; i < read_count; ++i) {
-    std::string select_str = "FETCH ALL FROM ref" + std::to_string(i) + ";";
-    pqxx::result R = txn.exec(select_str.c_str());
-    
-    std::cout << "txn result set size = " << R.size() << std::endl;
-
-    for (size_t i = 0; i < R.size(); ++i) {
-      std::cout << R[i][0].as<std::string>() << std::endl;
-    }
-  }
-
-  txn.commit();
 
   pqxx::nontransaction nontxn1(conn);
 
@@ -241,10 +266,4 @@ void Scan(pqxx::connection &conn) {
   
   txn.commit();
 }
-
-
-
-
-
-
 

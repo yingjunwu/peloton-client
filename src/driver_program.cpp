@@ -130,53 +130,55 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
 
   std::string func_str("CREATE OR REPLACE FUNCTION ycsb(");
 
-  if (read_count == 0) {
+  // if (read_count == 0) {
     for (size_t i = 0; i < config.operation_count_ - 1; ++i) {
       func_str += "val" + std::to_string(i) + " integer, ";
     }
     func_str +=  "val" + std::to_string(config.operation_count_ - 1) + " integer) ";
-  } else {
-    for (size_t i = 0; i < config.operation_count_; ++i) {
-      func_str += "val" + std::to_string(i) + " integer, ";
-    }
-    for (size_t i = 0; i < read_count - 1; ++i) {
-      func_str += "ref" + std::to_string(i) + " refcursor, ";
-    }
-    func_str += "ref" + std::to_string(read_count - 1) + " refcursor) ";
-  }
+  // } else {
+  //   for (size_t i = 0; i < config.operation_count_; ++i) {
+  //     func_str += "val" + std::to_string(i) + " integer, ";
+  //   }
+  //   for (size_t i = 0; i < read_count - 1; ++i) {
+  //     func_str += "ref" + std::to_string(i) + " refcursor, ";
+  //   }
+  //   func_str += "ref" + std::to_string(read_count - 1) + " refcursor) ";
+  // }
 
   func_str += "RETURNS ";
   
-  if (read_count == 0) {
+  // if (read_count == 0) {
     func_str += "void ";
-  } else if (read_count == 1) {
-    func_str += "refcursor ";
-  } else {
-    func_str += "SETOF refcursor ";
-  }
+  // } else if (read_count == 1) {
+  //   func_str += "refcursor ";
+  // } else {
+  //   func_str += "SETOF refcursor ";
+  // }
   
   func_str += "AS $$ ";
 
   func_str += "BEGIN ";
 
-  size_t curr_read_count = 0;
+  // size_t curr_read_count = 0;
   for (size_t i = 0; i < config.operation_count_; ++i) {
     if (is_update[i] == true) {
       // is update
       func_str += "UPDATE employee SET name = 'z' WHERE id=val" + std::to_string(i) + ";";
     } else {
       // is read
-      if (read_count == 1) {
-        func_str += "OPEN ref" + std::to_string(curr_read_count) + 
-                    " FOR SELECT name FROM employee where id = val" + 
-                    std::to_string(i) + "; RETURN ref" + std::to_string(curr_read_count) + ";";
-        ++curr_read_count;
-      } else {
-        func_str += "OPEN ref" + std::to_string(curr_read_count) + 
-                    " FOR SELECT name FROM employee where id = val" + 
-                    std::to_string(i) + "; RETURN NEXT ref" + std::to_string(curr_read_count) + ";";
-        ++curr_read_count;
-      }
+      // if (read_count == 1) {
+        func_str += 
+                    // "OPEN ref" + std::to_string(curr_read_count) + 
+                    // " FOR " + 
+                    "PERFORM name FROM employee where id = val" + std::to_string(i) + ";";
+                    // + " RETURN ref" + std::to_string(curr_read_count) + ";";
+        // ++curr_read_count;
+      // } else {
+      //   func_str += "OPEN ref" + std::to_string(curr_read_count) + 
+      //               " FOR SELECT name FROM employee where id = val" + 
+      //               std::to_string(i) + "; RETURN NEXT ref" + std::to_string(curr_read_count) + ";";
+      //   ++curr_read_count;
+      // }
     }
   }
   func_str += " END; $$ LANGUAGE PLPGSQL;";
@@ -199,23 +201,23 @@ void ProcessProcedure(pqxx::connection &conn, const DriverConfig &config) {
     pqxx::work txn(conn);
 
     std::string txn_str = "SELECT ycsb(";
-    if (read_count == 0) {
+    // if (read_count == 0) {
       for (size_t i = 0; i < config.operation_count_ - 1; ++i) {
         size_t key = zipf.GetNextNumber() - 1;
         txn_str += std::to_string(key) + ", ";
       }
       size_t key = zipf.GetNextNumber() - 1;
       txn_str += std::to_string(key) + ");";
-    } else {
-      for (size_t i = 0; i < config.operation_count_; ++i) {
-        size_t key = zipf.GetNextNumber() - 1;
-        txn_str += std::to_string(key) + ", ";
-      }
-      for (size_t i = 0; i < read_count - 1; ++i) {
-        txn_str += "'ref" + std::to_string(i) + "', ";
-      }
-      txn_str += "'ref" + std::to_string(read_count - 1) + "');";
-    }
+    // } else {
+    //   for (size_t i = 0; i < config.operation_count_; ++i) {
+    //     size_t key = zipf.GetNextNumber() - 1;
+    //     txn_str += std::to_string(key) + ", ";
+    //   }
+    //   for (size_t i = 0; i < read_count - 1; ++i) {
+    //     txn_str += "'ref" + std::to_string(i) + "', ";
+    //   }
+    //   txn_str += "'ref" + std::to_string(read_count - 1) + "');";
+    // }
 
     std::cout << txn_str << std::endl;
 
